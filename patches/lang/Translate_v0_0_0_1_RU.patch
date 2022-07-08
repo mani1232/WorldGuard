@@ -1,0 +1,139 @@
+Index: worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/BukkitWorldConfiguration.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/BukkitWorldConfiguration.java b/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/BukkitWorldConfiguration.java
+--- a/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/BukkitWorldConfiguration.java	(date 1657244139514)
++++ b/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/BukkitWorldConfiguration.java	(revision bc63119373d4603e5b040460c41e712275a4d062)
+@@ -95,7 +95,7 @@
+         loadConfiguration();
+ 
+         if (summaryOnStart) {
+-            log.info("Загруженная конфигурация для мира '" + worldName + "'");
++            log.info("Loaded configuration for world '" + worldName + "'");
+         }
+     }
+ 
+@@ -119,7 +119,7 @@
+             try {
+                 set.add(matcherParser.fromInput(input));
+             } catch (TargetMatcherParseException e) {
+-                log.warning("Не удалось проанализировать тип блока/элемента, указанный как '" + input + "'");
++                log.warning("Failed to parse the block / item type specified as '" + input + "'");
+             }
+         }
+ 
+@@ -134,9 +134,9 @@
+         try {
+             config.load();
+         } catch (IOException e) {
+-            log.log(Level.SEVERE, "Ошибка чтения конфигурации для мира " + worldName + ": ", e);
++            log.log(Level.SEVERE, "Error reading configuration for world " + worldName + ": ", e);
+         } catch (YAMLException e) {
+-            log.severe("Ошибка синтаксического анализа конфигурации для мира " + worldName + ". ");
++            log.severe("Error parsing configuration for world " + worldName + ". ");
+             throw e;
+         }
+ 
+@@ -147,7 +147,7 @@
+ 
+         buildPermissions = getBoolean("build-permission-nodes.enable", false);
+         buildPermissionDenyMessage = CommandUtils.replaceColorMacros(
+-                getString("build-permission-nodes.deny-message", "&eИзвините, но вам не разрешено делать это &4здесь."));
++                getString("build-permission-nodes.deny-message", "&eSorry, but you are not permitted to do that here."));
+ 
+         strictEntitySpawn = getBoolean("event-handling.block-entity-spawns-with-untraceable-cause", false);
+         allowAllInteract = getTargetMatchers("event-handling.interaction-whitelist");
+@@ -170,7 +170,7 @@
+             PotionEffectType effect = PotionEffectType.getByName(potionName);
+ 
+             if (effect == null) {
+-                log.warning("Неизвестный тип эффекта зелья '" + potionName + "'");
++                log.warning("Unknown potion effect type '" + potionName + "'");
+             } else {
+                 blockPotions.add(effect);
+             }
+@@ -182,7 +182,7 @@
+         spongeRadius = Math.max(1, getInt("simulation.sponge.radius", 3)) - 1;
+         redstoneSponges = getBoolean("simulation.sponge.redstone", false);
+         if (simulateSponge) {
+-            log.warning("Моделирование губки устарело и будет удалено в будущей версии. Вместо этого мы рекомендуем использовать симуляцию губки CraftBook..");
++            log.warning("Sponge simulation is deprecated for removal in a future version. We recommend using CraftBook's sponge simulation instead.");
+         } else {
+             needParentSave |= removeProperty("simulation");
+         }
+@@ -246,7 +246,7 @@
+         signChestProtection = getBoolean("chest-protection.enable", false);
+         disableSignChestProtectionCheck = getBoolean("chest-protection.disable-off-check", false);
+         if (signChestProtection) {
+-            log.warning("Защита сундука на основе знаков устарела и будет удалена в будущей версии. Подробнее см. https://worldguard.enginehub.org/en/latest/chest-protection/.");
++            log.warning("Sign-based chest protection is deprecated for removal in a future version. See https://worldguard.enginehub.org/en/latest/chest-protection/ for details.");
+         } else {
+             needParentSave |= removeProperty("chest-protection");
+         }
+@@ -319,7 +319,7 @@
+             EntityType creature = EntityTypes.get(creatureName.toLowerCase());
+ 
+             if (creature == null) {
+-                log.warning("Неизвестный тип сущности '" + creatureName + "'");
++                log.warning("Unknown entity type '" + creatureName + "'");
+             } else {
+                 blockCreatureSpawn.add(creature);
+             }
+@@ -360,7 +360,7 @@
+             } else {
+                 this.blacklist = blist;
+                 if (summaryOnStart) {
+-                    log.log(Level.INFO, "({0}) Черный список загружен {1} записями.",
++                    log.log(Level.INFO, "({0}) Blacklist loaded with {1} entries.",
+                             new Object[]{worldName, blacklist.getItemCount()});
+                 }
+ 
+@@ -381,34 +381,34 @@
+                 }
+             }
+         } catch (FileNotFoundException e) {
+-            log.log(Level.WARNING, "Черный список WorldGuard не существует.");
++            log.log(Level.WARNING, "WorldGuard blacklist does not exist.");
+         } catch (IOException e) {
+-            log.log(Level.WARNING, "Не удалось загрузить черный список WorldGuard: "
++            log.log(Level.WARNING, "Could not load WorldGuard blacklist: "
+                     + e.getMessage());
+         }
+ 
+         // Print an overview of settings
+         if (summaryOnStart) {
+             log.log(Level.INFO, blockTNTExplosions
+-                    ? "(" + worldName + ") Зажигание TNT заблокировано."
+-                    : "(" + worldName + ") Зажигание TNT РАЗРЕШЕНО.");
++                    ? "(" + worldName + ") TNT ignition is blocked."
++                    : "(" + worldName + ") TNT ignition is PERMITTED.");
+             log.log(Level.INFO, blockLighter
+-                    ? "(" + worldName + ") Зажигалки заблокированы."
+-                    : "(" + worldName + ") Зажигалки РАЗРЕШЕНЫ.");
++                    ? "(" + worldName + ") Lighters are blocked."
++                    : "(" + worldName + ") Lighters are PERMITTED.");
+             log.log(Level.INFO, preventLavaFire
+-                    ? "(" + worldName + ") Пламя лавы заблокировано."
+-                    : "(" + worldName + ") Пламя лавы РАЗРЕШЕНJ.");
++                    ? "(" + worldName + ") Lava fire is blocked."
++                    : "(" + worldName + ") Lava fire is PERMITTED.");
+ 
+             if (disableFireSpread) {
+-                log.log(Level.INFO, "(" + worldName + ") Все распространение огня отключено.");
++                log.log(Level.INFO, "(" + worldName + ") All fire spread is disabled.");
+             } else {
+                 if (!disableFireSpreadBlocks.isEmpty()) {
+                     log.log(Level.INFO, "(" + worldName
+-                            + ") Распространение огня ограничено "
+-                            + disableFireSpreadBlocks.size() + " типы блоков.");
++                            + ") Fire spread is limited to "
++                            + disableFireSpreadBlocks.size() + " block types.");
+                 } else {
+                     log.log(Level.INFO, "(" + worldName
+-                            + ") Распространение огня НЕ ОГРАНИЧЕНО.");
++                            + ") Fire spread is UNRESTRICTED.");
+                 }
+             }
+         }
