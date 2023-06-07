@@ -60,10 +60,12 @@ import com.sk89q.worldguard.bukkit.listener.WorldGuardWorldListener;
 import com.sk89q.worldguard.bukkit.listener.WorldRulesListener;
 import com.sk89q.worldguard.bukkit.session.BukkitSessionManager;
 import com.sk89q.worldguard.bukkit.util.ClassSourceValidator;
+import com.sk89q.worldguard.bukkit.util.Entities;
 import com.sk89q.worldguard.bukkit.util.Events;
 import com.sk89q.worldguard.commands.GeneralCommands;
 import com.sk89q.worldguard.commands.ProtectionCommands;
 import com.sk89q.worldguard.commands.ToggleCommands;
+import com.sk89q.worldguard.domains.registry.SimpleDomainRegistry;
 import com.sk89q.worldguard.protection.flags.Flag;
 import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.flags.registry.SimpleFlagRegistry;
@@ -158,11 +160,9 @@ public class WorldGuardPlugin extends JavaPlugin {
         reg.register(ToggleCommands.class);
         reg.register(ProtectionCommands.class);
 
-        getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
-            if (!platform.getGlobalStateManager().hasCommandBookGodMode()) {
-                reg.register(GeneralCommands.class);
-            }
-        }, 0L);
+        if (!platform.getGlobalStateManager().hasCommandBookGodMode()) {
+            reg.register(GeneralCommands.class);
+        }
 
         getServer().getScheduler().scheduleSyncRepeatingTask(this, sessionManager, BukkitSessionManager.RUN_DELAY, BukkitSessionManager.RUN_DELAY);
 
@@ -213,6 +213,7 @@ public class WorldGuardPlugin extends JavaPlugin {
         });
 
         ((SimpleFlagRegistry) WorldGuard.getInstance().getFlagRegistry()).setInitialized(true);
+        ((SimpleDomainRegistry) WorldGuard.getInstance().getDomainRegistry()).setInitialized(true);
 
         // Enable metrics
         final Metrics metrics = new Metrics(this, BSTATS_PLUGIN_ID); // bStats plugin id
@@ -421,8 +422,9 @@ public class WorldGuardPlugin extends JavaPlugin {
     }
 
     public Actor wrapCommandSender(CommandSender sender) {
-        if (sender instanceof Player) {
-            return wrapPlayer((Player) sender);
+        if (sender instanceof Player player) {
+            if (Entities.isNPC(player)) return null;
+            return wrapPlayer(player);
         }
 
         try {

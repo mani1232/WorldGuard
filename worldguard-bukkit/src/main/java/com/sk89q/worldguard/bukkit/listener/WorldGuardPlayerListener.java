@@ -258,13 +258,11 @@ public class WorldGuardPlayerListener extends AbstractListener {
         }
 
         if (wcfg.useRegions) {
-            //Block placedIn = block.getRelative(event.getBlockFace());
-            ApplicableRegionSet set =
-                    WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery().getApplicableRegions(BukkitAdapter.adapt(block.getLocation()));
-            //ApplicableRegionSet placedInSet = plugin.getRegionContainer().createQuery().getApplicableRegions(placedIn.getLocation());
             LocalPlayer localPlayer = getPlugin().wrapPlayer(player);
 
             if (item != null && item.getType().getKey().toString().equals(wcfg.regionWand) && getPlugin().hasPermission(player, "worldguard.region.wand")) {
+                ApplicableRegionSet set = WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery()
+                        .getApplicableRegions(BukkitAdapter.adapt(block.getLocation()), RegionQuery.QueryOption.SORT);
                 if (set.size() > 0) {
                     player.sendMessage(ChatColor.YELLOW + "Can you build? " + (set.testState(localPlayer, Flags.BUILD) ? "Yes" : "No"));
 
@@ -314,6 +312,7 @@ public class WorldGuardPlayerListener extends AbstractListener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
+        if (com.sk89q.worldguard.bukkit.util.Entities.isNPC(player)) return;
         WorldConfiguration wcfg = getWorldConfig(player.getWorld());
 
         if (wcfg.useRegions) {
@@ -348,6 +347,7 @@ public class WorldGuardPlayerListener extends AbstractListener {
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
+        if (com.sk89q.worldguard.bukkit.util.Entities.isNPC(player)) return;
         LocalPlayer localPlayer = getPlugin().wrapPlayer(player);
         ConfigurationManager cfg = getConfig();
         WorldConfiguration wcfg = getWorldConfig(player.getWorld());

@@ -19,6 +19,7 @@
 
 package com.sk89q.worldguard.bukkit.util;
 
+import org.bukkit.entity.Allay;
 import org.bukkit.entity.Ambient;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Arrow;
@@ -101,8 +102,20 @@ public final class Entities {
      * @return true if the type is a vehicle type
      */
     public static boolean isVehicle(EntityType type) {
-        return type == EntityType.BOAT
-                || isMinecart(type);
+        return isBoat(type) || isMinecart(type);
+    }
+
+    /**
+     * Test whether the given entity type is a Boat type.
+     *
+     * @param type the type
+     * @return true if the type is a Boat type
+     */
+    public static boolean isBoat(EntityType type) {
+        return switch(type) {
+            case BOAT, CHEST_BOAT -> true;
+            default -> false;
+        };
     }
 
     /**
@@ -112,13 +125,11 @@ public final class Entities {
      * @return true if the type is a Minecart type
      */
     public static boolean isMinecart(EntityType type) {
-        return type == EntityType.MINECART
-                || type == EntityType.MINECART_CHEST
-                || type == EntityType.MINECART_COMMAND
-                || type == EntityType.MINECART_FURNACE
-                || type == EntityType.MINECART_HOPPER
-                || type == EntityType.MINECART_MOB_SPAWNER
-                || type == EntityType.MINECART_TNT;
+        return switch(type) {
+            case MINECART, MINECART_CHEST, MINECART_COMMAND, MINECART_FURNACE,
+                    MINECART_HOPPER, MINECART_MOB_SPAWNER, MINECART_TNT -> true;
+            default -> false;
+        };
     }
 
     /**
@@ -208,6 +219,7 @@ public final class Entities {
         return entity instanceof Hanging
                 || entity instanceof ArmorStand
                 || entity instanceof EnderCrystal
+                || entity instanceof Allay
                 || entity instanceof Minecart && entity instanceof InventoryHolder;
     }
 

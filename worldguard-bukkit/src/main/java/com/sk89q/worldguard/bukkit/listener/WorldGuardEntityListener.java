@@ -25,13 +25,17 @@ import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.bukkit.BukkitWorldConfiguration;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.bukkit.cause.Cause;
 import com.sk89q.worldguard.bukkit.util.Entities;
+import com.sk89q.worldguard.bukkit.util.InteropUtils;
 import com.sk89q.worldguard.config.ConfigurationManager;
 import com.sk89q.worldguard.config.WorldConfiguration;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.FailedLoadRegionSet;
 import com.sk89q.worldguard.protection.association.RegionAssociable;
 import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.flags.StateFlag;
+import com.sk89q.worldguard.protection.flags.StateFlag.State;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
@@ -138,8 +142,7 @@ public class WorldGuardEntityListener extends AbstractListener {
                 event.setCancelled(true);
                 return;
             }
-        } else if (defender instanceof Player) {
-            Player player = (Player) defender;
+        } else if (defender instanceof Player player && !Entities.isNPC(defender)) {
             LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
 
             if (wcfg.disableLavaDamage && type == DamageCause.LAVA) {
@@ -227,8 +230,7 @@ public class WorldGuardEntityListener extends AbstractListener {
             }
         }
 
-        if (defender instanceof Player) {
-            Player player = (Player) defender;
+        if (defender instanceof Player player && !Entities.isNPC(defender)) {
             LocalPlayer localPlayer = getPlugin().wrapPlayer(player);
 
             if (wcfg.disableLightningDamage && event.getCause() == DamageCause.LIGHTNING) {
@@ -289,8 +291,7 @@ public class WorldGuardEntityListener extends AbstractListener {
         }
 
         WorldConfiguration wcfg = getWorldConfig(defender.getWorld());
-        if (defender instanceof Player) {
-            Player player = (Player) defender;
+        if (defender instanceof Player player && !Entities.isNPC(defender)) {
             LocalPlayer localPlayer = getPlugin().wrapPlayer(player);
 
 
@@ -363,8 +364,7 @@ public class WorldGuardEntityListener extends AbstractListener {
                 event.setCancelled(true);
                 return;
             }
-        } else if (defender instanceof Player) {
-            Player player = (Player) defender;
+        } else if (defender instanceof Player player && !Entities.isNPC(defender)) {
             LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
 
             if (type == DamageCause.WITHER) {
@@ -657,35 +657,46 @@ public class WorldGuardEntityListener extends AbstractListener {
     public void onCreatePortal(PortalCreateEvent event) {
         WorldConfiguration wcfg = getWorldConfig(event.getWorld());
 
-        if (wcfg.regionNetherPortalProtection
+        if (wcfg.useRegions && wcfg.regionNetherPortalProtection
                 && event.getReason() == PortalCreateEvent.CreateReason.NETHER_PAIR
                 && !event.getBlocks().isEmpty()) {
             final com.sk89q.worldedit.world.World world = BukkitAdapter.adapt(event.getWorld());
-            final RegionManager regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer()
-                    .get(world);
-            if (regionManager == null) return;
-            LocalPlayer associable = null;
-            if (event.getEntity() instanceof Player) {
-                associable = getPlugin().wrapPlayer(((Player) event.getEntity()));
-                if (WorldGuard.getInstance().getPlatform().getSessionManager().hasBypass(associable, world)) {
+            final Cause cause = Cause.create(event.getEntity());
+            LocalPlayer localPlayer = null;
+            if (cause.getRootCause() instanceof Player player) {
+                if (wcfg.fakePlayerBuildOverride && InteropUtils.isFakePlayer(player)) {
+                    return;
+                }
+                localPlayer = getPlugin().wrapPlayer(player);
+                if (WorldGuard.getInstance().getPlatform().getSessionManager().hasBypass(localPlayer, world)) {
                     return;
                 }
             }
-            BlockVector3 min = null;
-            BlockVector3 max = null;
-            for (BlockState block : event.getBlocks()) {
-                BlockVector3 loc = BlockVector3.at(block.getX(), block.getY(), block.getZ());
-                min = min == null ? loc : loc.getMinimum(min);
-                max = max == null ? loc : loc.getMaximum(max);
+            final RegionManager regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer()
+                    .get(world);
+            ApplicableRegionSet regions;
+            if (regionManager == null) {
+                regions = FailedLoadRegionSet.getInstance();
+            } else {
+                BlockVector3 min = null;
+                BlockVector3 max = null;
+                for (BlockState block : event.getBlocks()) {
+                    BlockVector3 loc = BlockVector3.at(block.getX(), block.getY(), block.getZ());
+                    min = min == null ? loc : loc.getMinimum(min);
+                    max = max == null ? loc : loc.getMaximum(max);
+                }
+                ProtectedCuboidRegion target = new ProtectedCuboidRegion("__portal_check", true, min, max);
+                regions = regionManager.getApplicableRegions(target);
             }
-            ProtectedCuboidRegion target = new ProtectedCuboidRegion("__portal_check", true, min, max);
-            final ApplicableRegionSet regions = regionManager.getApplicableRegions(target);
-            if (!regions.testState(associable, Flags.BUILD, Flags.BLOCK_PLACE)) {
-                if (associable != null) {
+            final RegionAssociable associable = createRegionAssociable(cause);
+            final State buildState = StateFlag.denyToNone(regions.queryState(associable, Flags.BUILD));
+            if (!StateFlag.test(buildState, regions.queryState(associable, Flags.BLOCK_BREAK))
+                    || !StateFlag.test(buildState, regions.queryState(associable, Flags.BLOCK_PLACE))) {
+                if (localPlayer != null && !cause.isIndirect()) {
                     // NB there is no way to cancel the teleport without PTA (since PlayerPortal doesn't have block info)
                     // removing PTA was a mistake
-                    String message = regions.queryValue(associable, Flags.DENY_MESSAGE);
-                    RegionProtectionListener.formatAndSendDenyMessage("create portals", associable, message);
+                    String message = regions.queryValue(localPlayer, Flags.DENY_MESSAGE);
+                    RegionProtectionListener.formatAndSendDenyMessage("create portals", localPlayer, message);
                 }
                 event.setCancelled(true);
             }
@@ -745,10 +756,10 @@ public class WorldGuardEntityListener extends AbstractListener {
             event.setCancelled(true);
             return;
         }
-        if (wcfg.useRegions && ent instanceof Player
+        if (wcfg.useRegions && ent instanceof Player player && !Entities.isNPC(ent)
                 && !WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery().testState(
                         BukkitAdapter.adapt(ent.getLocation()),
-                        WorldGuardPlugin.inst().wrapPlayer((Player) ent),
+                        WorldGuardPlugin.inst().wrapPlayer(player),
                         Flags.HEALTH_REGEN)) {
             event.setCancelled(true);
         }
@@ -758,10 +769,11 @@ public class WorldGuardEntityListener extends AbstractListener {
     public void onFoodChange(FoodLevelChangeEvent event) {
         if (event.getItem() != null) return;
         HumanEntity ent = event.getEntity();
-        if (!(ent instanceof Player)) return;
+        if (Entities.isNPC(ent)) return;
+        if (!(ent instanceof Player bukkitPlayer)) return;
         if (event.getFoodLevel() > ent.getFoodLevel()) return;
 
-        LocalPlayer player = WorldGuardPlugin.inst().wrapPlayer((Player) ent);
+        LocalPlayer player = WorldGuardPlugin.inst().wrapPlayer(bukkitPlayer);
         WorldConfiguration wcfg = getWorldConfig(ent.getWorld());
 
         if (wcfg.useRegions
