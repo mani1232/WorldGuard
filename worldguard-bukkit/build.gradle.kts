@@ -12,6 +12,10 @@ repositories {
         name = "paper"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
+    maven {
+        name = "arim-mvn-lgpl3"
+        url = uri("https://mvn-repo.arim.space/lesser-gpl3/")
+    }
 }
 
 configurations {
@@ -28,6 +32,7 @@ dependencies {
     "implementation"("com.google.guava:guava:${Versions.GUAVA}")
     "compileOnly"("com.sk89q:commandbook:2.3") { isTransitive = false }
     "shadeOnly"("io.papermc:paperlib:1.0.8")
+    "shadeOnly"("space.arim.morepaperlib:morepaperlib:0.4.2")
     "shadeOnly"("org.bstats:bstats-bukkit:3.0.1")
 }
 
@@ -57,6 +62,9 @@ tasks.named<ShadowJar>("shadowJar") {
         }
         relocate ("io.papermc.lib", "com.sk89q.worldguard.bukkit.paperlib") {
             include(dependency("io.papermc:paperlib"))
+        }
+        relocate ("space.arim.morepaperlib", "com.sk89q.worldguard.bukkit.morepaperlib") {
+            include(dependency("space.arim.morepaperlib:morepaperlib"))
         }
         relocate ("co.aikar.timings.lib", "com.sk89q.worldguard.bukkit.timingslib") {
             include(dependency("co.aikar:minecraft-timings"))

@@ -19,16 +19,16 @@
 
 package com.sk89q.worldguard.bukkit.util.report;
 
-import com.google.common.reflect.TypeToken;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.reflect.TypeToken;
 import com.sk89q.worldedit.util.report.DataReport;
-import org.bukkit.Bukkit;
-import org.bukkit.scheduler.BukkitTask;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -52,24 +52,24 @@ public class SchedulerReport extends DataReport {
     public SchedulerReport() {
         super("Scheduler");
 
-        List<BukkitTask> tasks = Bukkit.getServer().getScheduler().getPendingTasks();
+        List<ScheduledTask> tasks = Collections.emptyList();//Bukkit.getServer().getScheduler().getPendingTasks();
 
         append("Pending Task Count", tasks.size());
 
-        for (BukkitTask task : tasks) {
+        for (ScheduledTask task : tasks) {
             Class<?> taskClass = getTaskClass(task);
 
-            DataReport report = new DataReport("Task: #" + task.getTaskId());
-            report.append("Owner", task.getOwner().getName());
+            DataReport report = new DataReport("Task: #" + task);
+            report.append("Owner", task.owningPlugin());
             report.append("Runnable", taskClass != null ? taskClass.getName() : "<Unknown>");
-            report.append("Synchronous?", task.isSync());
+            report.append("Cancel?", task.isCancelled());
             append(report.getTitle(), report);
         }
     }
 
     @SuppressWarnings("unchecked")
     @Nullable
-    private Class<?> getTaskClass(BukkitTask task) {
+    private Class<?> getTaskClass(ScheduledTask task) {
         try {
             Class<?> clazz = task.getClass();
             Set<Class<?>> classes = (Set) TypeToken.of(clazz).getTypes().rawTypes();

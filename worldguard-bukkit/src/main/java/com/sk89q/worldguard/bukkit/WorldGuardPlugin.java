@@ -88,6 +88,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import space.arim.morepaperlib.MorePaperLib;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -109,6 +110,8 @@ public class WorldGuardPlugin extends JavaPlugin {
     private final CommandsManager<Actor> commands;
     private PlayerMoveListener playerMoveListener;
 
+    private final MorePaperLib morePaperLib;
+
     private static final int BSTATS_PLUGIN_ID = 3283;
 
     /**
@@ -117,6 +120,7 @@ public class WorldGuardPlugin extends JavaPlugin {
      */
     public WorldGuardPlugin() {
         inst = this;
+        morePaperLib = new MorePaperLib(this);
         commands = new CommandsManager<Actor>() {
             @Override
             public boolean hasPermission(Actor player, String perm) {
@@ -164,7 +168,7 @@ public class WorldGuardPlugin extends JavaPlugin {
             reg.register(GeneralCommands.class);
         }
 
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, sessionManager, BukkitSessionManager.RUN_DELAY, BukkitSessionManager.RUN_DELAY);
+        morePaperLib.scheduling().globalRegionalScheduler().runAtFixedRate(sessionManager, BukkitSessionManager.RUN_DELAY, BukkitSessionManager.RUN_DELAY);
 
         // Register events
         getServer().getPluginManager().registerEvents(sessionManager, this);
@@ -205,10 +209,12 @@ public class WorldGuardPlugin extends JavaPlugin {
         }
         worldListener.registerEvents();
 
-        Bukkit.getScheduler().runTask(this, () -> {
+        morePaperLib.scheduling().globalRegionalScheduler().run(() -> {
             for (Player player : Bukkit.getServer().getOnlinePlayers()) {
-                ProcessPlayerEvent event = new ProcessPlayerEvent(player);
-                Events.fire(event);
+                morePaperLib.scheduling().regionSpecificScheduler(player.getLocation()).run(() -> {
+                    ProcessPlayerEvent event = new ProcessPlayerEvent(player);
+                    Events.fire(event);
+                });
             }
         });
 
@@ -266,7 +272,7 @@ public class WorldGuardPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         WorldGuard.getInstance().disable();
-        this.getServer().getScheduler().cancelTasks(this);
+        morePaperLib.scheduling().cancelGlobalTasks();
     }
 
     @Override
@@ -526,4 +532,8 @@ public class WorldGuardPlugin extends JavaPlugin {
         return playerMoveListener;
     }
 
+
+    public MorePaperLib getMorePaperLib() {
+        return morePaperLib;
+    }
 }

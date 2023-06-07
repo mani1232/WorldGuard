@@ -235,7 +235,7 @@ public class BukkitWorldGuardPlatform implements WorldGuardPlatform {
     public void addPlatformReports(ReportList report) {
         report.add(new ServerReport());
         report.add(new PluginReport());
-        report.add(new SchedulerReport());
+        //report.add(new SchedulerReport());
         report.add(new ServicesReport());
         report.add(new WorldReport());
         report.add(new PerformanceReport());

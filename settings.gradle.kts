@@ -1,4 +1,4 @@
-rootProject.name = "worldguard"
+rootProject.name = "WorldGuard"
 
 include("worldguard-libs")
 include("worldguard-libs:core")
